@@ -17,6 +17,11 @@ enum IStatus
     FAILURE_UNKNOWN
 };
 
+enum IType
+{
+  SERVER
+};
+
 /*
  * IReply structure is designed to be used for displaying the
  * result of the command that has been sent to the server.
@@ -47,6 +52,16 @@ struct IReply
     enum IStatus comm_status;
     std::vector<std::string> all_users;
     std::vector<std::string> followers;
+};
+
+struct IServerInfo
+{
+  grpc::Status grpc_status;
+  enum IStatus comm_status;
+  int serverID;
+  std::string hostname; //IP address
+  std::string port;
+  enum IType type;
 };
 
 //some sort of way to parse stdin and wait for response, then returns that response as a string

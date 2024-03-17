@@ -52,6 +52,9 @@
 
 #include "sns.grpc.pb.h"
 
+#include "coordinator.grpc.pb.h"
+#include "coordinator.pb.h"
+
 
 using google::protobuf::Timestamp;
 using google::protobuf::Duration;

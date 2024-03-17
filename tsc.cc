@@ -13,6 +13,10 @@
 #include "client.h"
 
 #include "sns.grpc.pb.h"
+
+#include "coordinator.grpc.pb.h"
+#include "coordinator.pb.h"
+
 using grpc::Channel;
 using grpc::ClientContext;
 using grpc::ClientReader;
@@ -45,10 +49,10 @@ class Client : public IClient
 {
 public:
   //TODO: Change args
-  Client(const std::string& hname,
-	 const std::string& uname,
+  Client(const std::string& cname,
+	 const int& uname,
 	 const std::string& p)
-    :hostname(hname), username(uname), port(p) {}
+    :coordinatorIP(cname), userID(uname), coordinatorPort(p) {}
 
   
 protected:
@@ -57,13 +61,14 @@ protected:
   virtual void processTimeline();
 
 private:
-  std::string hostname;
-  std::string username;
-  std::string port;
+  int userID;
+  std::string coordinatorIP;
+  std::string coordinatorPort;
+  //std::string serverIP;
+  //std::string serverPort;
   
-  // You can have an instance of the client stub
-  // as a member variable.
-  std::unique_ptr<SNSService::Stub> stub_;
+  // client stub for server communication
+  std::unique_ptr<SNSService::Stub> stub_snss;
   
   IReply Login();
   IReply List();
@@ -83,9 +88,16 @@ int Client::connectTo()
   //ToDO: implement new connection to coordinator, use stub to call GetServerID
 
   //create new channel and stub
-  std::string login_info = hostname + ":" + port;
+  // std::string login_info_coord = coordinatorIP + ":" + coordinatorPort;
+  // auto coordChan = grpc::CreateChannel(login_info_coord, grpc::InsecureChannelCredentials()); 
+  // std::unique_ptr<CoordService::Stub> stub_coord = std::unique_ptr<CoordService::Stub>(coordChan);
+  // //attempt to login, return result
+  // IReply reply = Login();
+
+  //create new channel and stub
+  std::string login_info = coordinatorIP + ":" + coordinatorPort;
   auto chan = grpc::CreateChannel(login_info, grpc::InsecureChannelCredentials()); 
-  stub_ = std::make_unique<SNSService::Stub>(chan);
+  stub_snss = std::make_unique<SNSService::Stub>(chan);
   //attempt to login, return result
   IReply reply = Login();
   if (reply.grpc_status.ok()) {
@@ -142,7 +154,7 @@ IReply Client::processCommand(std::string& input)
 
 void Client::processTimeline()
 {
-    Timeline(username);
+    Timeline(std::to_string(userID));
 }
 
 
@@ -159,10 +171,10 @@ IReply Client::List() {
     //prepare a service call
     ClientContext context;
     Request request;
-    request.set_username(username);
+    request.set_username(std::to_string(userID));
     ListReply listReply;
 
-    grpc::Status status = stub_->List(&context, request, &listReply);
+    grpc::Status status = stub_snss->List(&context, request, &listReply);
 
     ire.grpc_status = status;
 
@@ -205,11 +217,11 @@ IReply Client::Follow(const std::string& username2) {
     //prepare service call
     ClientContext context;
     Request request;
-    request.set_username(username);
+    request.set_username(std::to_string(userID));
     request.add_arguments(username2);
     Reply reply;
 
-    grpc::Status status = stub_->Follow(&context, request, &reply);
+    grpc::Status status = stub_snss->Follow(&context, request, &reply);
 
     ire.grpc_status = status;
     //check status
@@ -245,11 +257,11 @@ IReply Client::UnFollow(const std::string& username2) {
     //construct service call
     ClientContext context;
     Request request;
-    request.set_username(username);
+    request.set_username(std::to_string(userID));
     request.add_arguments(username2);
     Reply reply;
 
-    grpc::Status status = stub_->UnFollow(&context, request, &reply);
+    grpc::Status status = stub_snss->UnFollow(&context, request, &reply);
     ire.grpc_status = status;
     if (ire.grpc_status.ok()) {
 
@@ -287,10 +299,10 @@ IReply Client::Login() {
   //construct service call
   ClientContext context;
   Request request;
-  request.set_username(username);
+  request.set_username(std::to_string(userID));
   Reply reply;
 
-  grpc::Status status = stub_->Login(&context, request, &reply);
+  grpc::Status status = stub_snss->Login(&context, request, &reply);
   ire.grpc_status = status;
   if (ire.grpc_status.ok()) {
     //follow can encounter various runtime errors that are communicated by a single char in reply
@@ -311,6 +323,8 @@ IReply Client::Login() {
   return ire;
 }
 
+//IServerInfo Client::GetServer(const int&)
+
 // Timeline Command
 void Client::Timeline(const std::string& username) {
 
@@ -323,7 +337,7 @@ void Client::Timeline(const std::string& username) {
   ClientContext context;
 
   //initialize a bidirectional wire with server timeline function that sends and recieves Message objects
-  std::shared_ptr<ClientReaderWriter<Message, Message> > streem(stub_->Timeline(&context));
+  std::shared_ptr<ClientReaderWriter<Message, Message> > streem(stub_snss->Timeline(&context));
 
   //create a thread to parse user input and send any posts to server
   std::thread writer([streem, username]() {
@@ -385,9 +399,9 @@ void Client::toUpperCase(std::string& str) const
 /////////////////////////////////////////////
 int main(int argc, char** argv) {
 
-  std::string hostname = "localhost";
-  std::string username = "default";
-  std::string port = "3010";
+  std::string coordIP = "localhost";
+  int username = 1;
+  std::string coordPort = "3010";
     
   //TODO:
   // change args
@@ -395,11 +409,11 @@ int main(int argc, char** argv) {
   while ((opt = getopt(argc, argv, "h:u:p:")) != -1){
     switch(opt) {
     case 'h':
-      hostname = optarg;break;
+      coordIP = optarg;break;
     case 'u':
-      username = optarg;break;
+      username = atoi(optarg);break;
     case 'p':
-      port = optarg;break;
+      coordPort = optarg;break;
     default:
       std::cout << "Invalid Command Line Argument\n";
     }
@@ -407,7 +421,7 @@ int main(int argc, char** argv) {
       
   std::cout << "Logging Initialized. Client starting...";
   
-  Client myc(hostname, username, port);
+  Client myc(coordIP, username, coordPort);
   
   myc.run();
   
