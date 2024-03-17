@@ -44,6 +44,7 @@ Message MakeMessage(const std::string& username, const std::string& msg) {
 class Client : public IClient
 {
 public:
+  //TODO: Change args
   Client(const std::string& hname,
 	 const std::string& uname,
 	 const std::string& p)
@@ -79,6 +80,8 @@ private:
 //////////////////////////////////////////////////////////
 int Client::connectTo()
 {
+  //ToDO: implement new connection to coordinator, use stub to call GetServerID
+
   //create new channel and stub
   std::string login_info = hostname + ":" + port;
   auto chan = grpc::CreateChannel(login_info, grpc::InsecureChannelCredentials()); 
@@ -141,6 +144,8 @@ void Client::processTimeline()
 {
     Timeline(username);
 }
+
+
 
 // List Command
 IReply Client::List() {
@@ -384,6 +389,8 @@ int main(int argc, char** argv) {
   std::string username = "default";
   std::string port = "3010";
     
+  //TODO:
+  // change args
   int opt = 0;
   while ((opt = getopt(argc, argv, "h:u:p:")) != -1){
     switch(opt) {
