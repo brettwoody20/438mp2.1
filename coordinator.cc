@@ -148,7 +148,7 @@ void RunServer(std::string port_no){
 
 int main(int argc, char** argv) {
 
-    std::string port = "3010";
+    std::string port = "9090";
     int opt = 0;
     while ((opt = getopt(argc, argv, "p:")) != -1){
         switch(opt) {

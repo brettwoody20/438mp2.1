@@ -65,11 +65,14 @@ using grpc::ServerReader;
 using grpc::ServerReaderWriter;
 using grpc::ServerWriter;
 using grpc::Status;
+using csce438::SNSService;
 using csce438::Message;
 using csce438::ListReply;
 using csce438::Request;
 using csce438::Reply;
-using csce438::SNSService;
+using csce438::CoordService;
+using csce438::ServerInfo;
+using csce438::Confirmation;
 
 
 struct Client {
@@ -388,7 +391,8 @@ class SNSServiceImpl final : public SNSService::Service {
 
 };
 
-void RunServer(std::string port_no) {
+void RunServer(int clusterId, int serverId, std::string coordIP,
+                std::string coordPort, std::string port_no) {
   //construct server address
   std::string server_address = "0.0.0.0:"+port_no;
   //create instance of SNSSServiceImpl to implement grpc methods
@@ -407,14 +411,33 @@ void RunServer(std::string port_no) {
 }
 
 int main(int argc, char** argv) {
+  /*arguments
+  c: cluster id - def: 1
+  s: server id - def: 1
+  h: coordinator ip - def: "localhost"
+  k: coordinator port - def: 9090
+  p: port number
+  */ 
 
-  std::string port = "3010";
+  int clusterId = 1;
+  int serverId = 1;
+  std::string coordIP = "localhost";
+  std::string coordPort = "9090";
+  std::string port = "10000";
   
   int opt = 0;
-  while ((opt = getopt(argc, argv, "p:")) != -1){
+  while ((opt = getopt(argc, argv, "c:s:h:k:p:")) != -1){
     switch(opt) {
+      case 'c':
+        clusterId = atoi(optarg);break;
+      case 's':
+        serverId = atoi(optarg);break;
+      case 'h':
+        coordIP = optarg;break;
+      case 'k':
+        coordPort = optarg;break;
       case 'p':
-          port = optarg;break;
+        port = optarg;break;
       default:
 	  std::cerr << "Invalid Command Line Argument\n";
     }
@@ -423,7 +446,7 @@ int main(int argc, char** argv) {
   std::string log_file_name = std::string("server-") + port;
   google::InitGoogleLogging(log_file_name.c_str());
   log(INFO, "Logging Initialized. Server starting...");
-  RunServer(port);
+  RunServer(clusterId, serverId, coordIP, coordPort, port);
 
   return 0;
 }

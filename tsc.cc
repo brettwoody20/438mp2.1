@@ -438,7 +438,7 @@ int main(int argc, char** argv) {
 
   std::string coordIP = "localhost";
   int username = 1;
-  std::string coordPort = "3010";
+  std::string coordPort = "9090";
     
   //TODO:
   // change args
