@@ -23,11 +23,15 @@ using grpc::ClientReader;
 using grpc::ClientReaderWriter;
 using grpc::ClientWriter;
 using grpc::Status;
+using csce438::SNSService;
 using csce438::Message;
 using csce438::ListReply;
 using csce438::Request;
 using csce438::Reply;
-using csce438::SNSService;
+using csce438::CoordService;
+using csce438::ServerInfo;
+using csce438::ID;
+
 
 void sig_ignore(int sig) {
   std::cout << "Signal caught " + sig;
@@ -67,9 +71,11 @@ private:
   //std::string serverIP;
   //std::string serverPort;
   
-  // client stub for server communication
+  // client stub for server and coordinator communication
   std::unique_ptr<SNSService::Stub> stub_snss;
+  std::unique_ptr<CoordService::Stub> stub_coord;
   
+  IServerInfo GetServer();
   IReply Login();
   IReply List();
   IReply Follow(const std::string &username);
@@ -87,17 +93,21 @@ int Client::connectTo()
 {
   //ToDO: implement new connection to coordinator, use stub to call GetServerID
 
-  //create new channel and stub
-  // std::string login_info_coord = coordinatorIP + ":" + coordinatorPort;
-  // auto coordChan = grpc::CreateChannel(login_info_coord, grpc::InsecureChannelCredentials()); 
-  // std::unique_ptr<CoordService::Stub> stub_coord = std::unique_ptr<CoordService::Stub>(coordChan);
-  // //attempt to login, return result
-  // IReply reply = Login();
+  //create new channel and stub FOR COORDINATOR
+  std::string login_info_coord = coordinatorIP + ":" + coordinatorPort;
+  auto coordChan = grpc::CreateChannel(login_info_coord, grpc::InsecureChannelCredentials()); 
+  stub_coord = std::make_unique<CoordService::Stub>(coordChan);
+  
+  //attempt to get server info from coordinator
+  IServerInfo server_info = GetServer();
+  if (!server_info.grpc_status.ok() || server_info.comm_status == IStatus::FAILURE_UNKNOWN) {
+    return -1;
+  }
 
-  //create new channel and stub
-  std::string login_info = coordinatorIP + ":" + coordinatorPort;
-  auto chan = grpc::CreateChannel(login_info, grpc::InsecureChannelCredentials()); 
-  stub_snss = std::make_unique<SNSService::Stub>(chan);
+  //create new channel and stub FOR SERVER
+  std::string login_info = server_info.hostname + ":" + server_info.port;
+  auto serverChan = grpc::CreateChannel(login_info, grpc::InsecureChannelCredentials()); 
+  stub_snss = std::make_unique<SNSService::Stub>(serverChan);
   //attempt to login, return result
   IReply reply = Login();
   if (reply.grpc_status.ok()) {
@@ -323,7 +333,34 @@ IReply Client::Login() {
   return ire;
 }
 
-//IServerInfo Client::GetServer(const int&)
+IServerInfo Client::GetServer() {
+
+  IServerInfo serve;
+
+  //construct service call
+  ClientContext context;
+  ID id;
+  id.set_id(userID);
+  ServerInfo serverInfo;
+
+  //call service call
+  grpc::Status status = stub_coord->GetServer(&context, id, &serverInfo);
+
+  //evaluate response and package it into serve
+  serve.grpc_status = status;
+  serve.comm_status = IStatus::FAILURE_UNKNOWN; //this is changed as long as server was successfully found
+  if(serve.grpc_status.ok()) {
+    if (serverInfo.serverid() != -1) {
+      serve.comm_status = IStatus::SUCCESS;
+      serve.serverID = serverInfo.serverid();
+      serve.hostname = serverInfo.hostname();
+      serve.port = serverInfo.port();
+      serve.type = IType::SERVER;
+    }
+  }
+
+  return serve;
+}
 
 // Timeline Command
 void Client::Timeline(const std::string& username) {

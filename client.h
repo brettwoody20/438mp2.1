@@ -19,7 +19,8 @@ enum IStatus
 
 enum IType
 {
-  SERVER
+  SERVER,
+  FAILED
 };
 
 /*

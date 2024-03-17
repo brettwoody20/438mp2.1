@@ -21,6 +21,8 @@
 #include <google/protobuf/util/time_util.h>
 #include <grpc++/grpc++.h>
 
+#include "client.h"
+
 #include "coordinator.grpc.pb.h"
 #include "coordinator.pb.h"
 
@@ -89,7 +91,32 @@ class CoordServiceImpl final : public CoordService::Service {
     //this function assumes there are always 3 clusters and has math
     //hardcoded to represent this.
     Status GetServer(ServerContext* context, const ID* id, ServerInfo* serverinfo) override {
-        // Your code here
+        int clusterId = ((id->id() - 1) % 3 ); //took out the +1 as I'll be using it as an index
+
+
+        v_mutex.lock();
+
+        if (clusters[clusterId].empty()) {
+            serverinfo->set_serverid(-1);
+            v_mutex.unlock();
+            return Status::OK;
+        }
+
+        zNode* z = clusters[clusterId][0];
+        //if server isn't active, return a -1
+        if (z == nullptr || !z->isActive()) {
+            serverinfo->set_serverid(-1);
+        }
+        //if server is active, reply with its values
+        else {
+            serverinfo->set_serverid(1);
+            serverinfo->set_hostname(z->hostname);
+            serverinfo->set_port(z->port);
+            //serverinfo->set_type(z->type); this is defaulted to server for mp 2.1
+        }
+
+        v_mutex.unlock();
+
         return Status::OK;
     }
 
