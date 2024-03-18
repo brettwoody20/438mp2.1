@@ -90,6 +90,7 @@ class CoordServiceImpl final : public CoordService::Service {
         
         //if the server already exists
         if (!clusters[serverinfo->serverid()-1].empty()) { //serverid currently holds cluster id
+            std::cout << "Server " << serverinfo->serverid() << " heartbeat..." << std::endl;
             zNode* server = clusters[serverinfo->serverid()-1][0];
             //if the server missed a hearbeat
             if (server->missed_heartbeat) {
@@ -102,6 +103,7 @@ class CoordServiceImpl final : public CoordService::Service {
         //else, need to create new server in list
         else {
             //create new z node with server info and insert it into cluster
+            std::cout << "New server, id: " << serverinfo->serverid() << std::endl;
             zNode* newServer = new zNode;
             newServer->serverID = 1; //SERVID
             newServer->hostname = serverinfo->hostname();
@@ -121,10 +123,13 @@ class CoordServiceImpl final : public CoordService::Service {
     Status GetServer(ServerContext* context, const ID* id, ServerInfo* serverinfo) override {
         int clusterId = ((id->id() - 1) % 3 ); //took out the +1 as I'll be using it as an index
 
+        std::cout << "Client " << id->id() << " being routed to cluster " << clusterId << std::endl;
+
 
         v_mutex.lock();
 
         if (clusters[clusterId].empty()) {
+            std::cerr << "Error: requested server not found" << std::endl;
             serverinfo->set_serverid(-1);
             v_mutex.unlock();
             return Status::OK;
@@ -145,6 +150,9 @@ class CoordServiceImpl final : public CoordService::Service {
 
         v_mutex.unlock();
 
+        std::cout << "completed GetServer" << std::endl;
+
+
         return Status::OK;
     }
 
@@ -155,7 +163,7 @@ void RunServer(std::string port_no){
     //start thread to check heartbeats
     std::thread hb(checkHeartbeat);
     //localhost = 127.0.0.1
-    std::string server_address("127.0.0.1:"+port_no);
+    std::string server_address("localhost:"+port_no);
     CoordServiceImpl service;
     //grpc::EnableDefaultHealthCheckService(true);
     //grpc::reflection::InitProtoReflectionServerBuilderPlugin();

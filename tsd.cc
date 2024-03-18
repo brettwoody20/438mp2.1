@@ -399,7 +399,9 @@ class SNSServiceImpl final : public SNSService::Service {
 
 void RunServer(int clusterId, int serverId, std::string coordIP,
                 std::string coordPort, std::string port_no) {
+          
   //TODO: create new channel and stub for coordinator
+  std::cout << "Attempting to open channel with coordinator..." << std::endl;
   std::string coord_address = coordIP+":"+coordPort;
   auto coordChan = grpc::CreateChannel(coord_address, grpc::InsecureChannelCredentials());
   std::unique_ptr<CoordService::Stub> stub_coord = std::make_unique<CoordService::Stub>(coordChan);
@@ -416,6 +418,7 @@ void RunServer(int clusterId, int serverId, std::string coordIP,
   std::thread heartBeat([&stub_coord, serverInfo]() {
     Confirmation confirmation;
     while(1) {
+      std::cerr << "Sending heartbeat..." << std::endl;
       ClientContext context;
       grpc::Status status = stub_coord->Heartbeat(&context, serverInfo, &confirmation);
 

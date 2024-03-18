@@ -94,6 +94,7 @@ int Client::connectTo()
   //ToDO: implement new connection to coordinator, use stub to call GetServerID
 
   //create new channel and stub FOR COORDINATOR
+  std::cout << "Attempting to open channel with coordinator..." << std::endl;
   std::string login_info_coord = coordinatorIP + ":" + coordinatorPort;
   auto coordChan = grpc::CreateChannel(login_info_coord, grpc::InsecureChannelCredentials()); 
   stub_coord = std::make_unique<CoordService::Stub>(coordChan);
@@ -105,6 +106,7 @@ int Client::connectTo()
   }
 
   //create new channel and stub FOR SERVER
+  std::cout << "Attempting to open channel with server..." << std::endl;
   std::string login_info = server_info.hostname + ":" + server_info.port;
   auto serverChan = grpc::CreateChannel(login_info, grpc::InsecureChannelCredentials()); 
   stub_snss = std::make_unique<SNSService::Stub>(serverChan);
@@ -335,6 +337,8 @@ IReply Client::Login() {
 
 IServerInfo Client::GetServer() {
 
+  std::cout << "Attempting to retrive server from coordinator..." << std::endl;
+
   IServerInfo serve;
 
   //construct service call
@@ -358,6 +362,8 @@ IServerInfo Client::GetServer() {
       serve.type = IType::SERVER;
     }
   }
+
+  std::cout << "Retrieved server " << serve.hostname << ":" << serve.port << std::endl;
 
   return serve;
 }
@@ -443,13 +449,13 @@ int main(int argc, char** argv) {
   //TODO:
   // change args
   int opt = 0;
-  while ((opt = getopt(argc, argv, "h:u:p:")) != -1){
+  while ((opt = getopt(argc, argv, "h:u:k:")) != -1){
     switch(opt) {
     case 'h':
       coordIP = optarg;break;
     case 'u':
       username = atoi(optarg);break;
-    case 'p':
+    case 'k':
       coordPort = optarg;break;
     default:
       std::cout << "Invalid Command Line Argument\n";
