@@ -411,7 +411,7 @@ void RunServer(int clusterId, int serverId, std::string coordIP,
   //create server info object to be repeatedly sent to coordinator
   ServerInfo serverInfo;
   serverInfo.set_serverid(clusterId); //currently using server_id slot to communicate clusterId as all serverId are 1
-  serverInfo.set_hostname("0.0.0.0:");
+  serverInfo.set_hostname("0.0.0.0");
   serverInfo.set_port(port_no);
   
   //pass the stub and serverInfo to another thread where it will be continually sent to the coordinator

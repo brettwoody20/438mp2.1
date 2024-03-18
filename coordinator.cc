@@ -95,6 +95,7 @@ class CoordServiceImpl final : public CoordService::Service {
             //if the server missed a hearbeat
             if (server->missed_heartbeat) {
                 //set that it has not missed a heartbeat
+                std::cout << "Server " << serverinfo->serverid() << " reconnected..." << std::endl;
                 server->missed_heartbeat = false;
             }
             //set last heartbeat to now
@@ -213,7 +214,7 @@ void checkHeartbeat(){
         for (auto& c : clusters){
             for(auto& s : c){
                 if(difftime(getTimeNow(),s->last_heartbeat)>10){
-                    std::cout << "missed heartbeat from server " << s->serverID << std::endl;
+                    std::cout << "missed heartbeat from server w/ id 1... " << std::endl;
                     if(!s->missed_heartbeat){
                         s->missed_heartbeat = true;
                         s->last_heartbeat = getTimeNow();

@@ -68,6 +68,7 @@ private:
   int userID;
   std::string coordinatorIP;
   std::string coordinatorPort;
+
   //std::string serverIP;
   //std::string serverPort;
   
@@ -94,7 +95,7 @@ int Client::connectTo()
   //ToDO: implement new connection to coordinator, use stub to call GetServerID
 
   //create new channel and stub FOR COORDINATOR
-  std::cout << "Attempting to open channel with coordinator..." << std::endl;
+  //std::cout << "Attempting to open channel with coordinator..." << std::endl;
   std::string login_info_coord = coordinatorIP + ":" + coordinatorPort;
   auto coordChan = grpc::CreateChannel(login_info_coord, grpc::InsecureChannelCredentials()); 
   stub_coord = std::make_unique<CoordService::Stub>(coordChan);
@@ -106,7 +107,7 @@ int Client::connectTo()
   }
 
   //create new channel and stub FOR SERVER
-  std::cout << "Attempting to open channel with server..." << std::endl;
+  //std::cout << "Attempting to open channel with server..." << std::endl;
   std::string login_info = server_info.hostname + ":" + server_info.port;
   auto serverChan = grpc::CreateChannel(login_info, grpc::InsecureChannelCredentials()); 
   stub_snss = std::make_unique<SNSService::Stub>(serverChan);
@@ -337,7 +338,7 @@ IReply Client::Login() {
 
 IServerInfo Client::GetServer() {
 
-  std::cout << "Attempting to retrive server from coordinator..." << std::endl;
+  //std::cout << "Attempting to retrive server from coordinator..." << std::endl;
 
   IServerInfo serve;
 
@@ -363,7 +364,7 @@ IServerInfo Client::GetServer() {
     }
   }
 
-  std::cout << "Retrieved server " << serve.hostname << ":" << serve.port << std::endl;
+  //std::cout << "Retrieved server " << serve.hostname << ":" << serve.port << std::endl;
 
   return serve;
 }

@@ -4,16 +4,31 @@
 //  enters loop to respond to input
 void IClient::run()
 {
+  bool connected = false;
   int ret = connectTo();
   if (ret < 0) {
     std::cout << "connection failed: " << ret << std::endl;
     exit(1);
   }
+  connected = true;
   displayTitle();
   while (1) {
     std::string cmd = getCommand();
+    if (!connected) {
+      if (connectTo() < 0) {
+        std::cerr << "Command Failed" << std::endl;
+        continue;
+      } else {
+        connected = true;
+      }
+    }
     IReply reply = processCommand(cmd);
-    displayCommandReply(cmd, reply);
+    if (!reply.grpc_status.ok()) {
+      std::cerr << "Command Failed" << std::endl;
+      connected = false;
+    } else {
+      displayCommandReply(cmd, reply);
+    }
     if (reply.grpc_status.ok() && reply.comm_status == SUCCESS
 	&& cmd == "TIMELINE") {
       std::cout << "Now you are in the timeline" << std::endl;
