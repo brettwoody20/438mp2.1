@@ -45,6 +45,7 @@
 #include <algorithm>
 #include <stdlib.h>
 #include <unistd.h>
+#include <thread>
 #include <google/protobuf/util/time_util.h>
 #include <grpc++/grpc++.h>
 #include <glog/logging.h>
@@ -65,6 +66,8 @@ using grpc::ServerReader;
 using grpc::ServerReaderWriter;
 using grpc::ServerWriter;
 using grpc::Status;
+using grpc::Channel;
+using grpc::ClientContext;
 using csce438::SNSService;
 using csce438::Message;
 using csce438::ListReply;
@@ -89,6 +92,8 @@ struct Client {
 
 //Vector that stores every client (and their data)
 std::vector<Client*> client_db;
+
+
 
 
 class SNSServiceImpl final : public SNSService::Service {
@@ -391,8 +396,34 @@ class SNSServiceImpl final : public SNSService::Service {
 
 };
 
+
 void RunServer(int clusterId, int serverId, std::string coordIP,
                 std::string coordPort, std::string port_no) {
+  //TODO: create new channel and stub for coordinator
+  std::string coord_address = coordIP+":"+coordPort;
+  auto coordChan = grpc::CreateChannel(coord_address, grpc::InsecureChannelCredentials());
+  std::unique_ptr<CoordService::Stub> stub_coord = std::make_unique<CoordService::Stub>(coordChan);
+
+  //TODO: create thread to continually send heartbeats to coordinator
+
+  //create server info object to be repeatedly sent to coordinator
+  ServerInfo serverInfo;
+  serverInfo.set_serverid(clusterId); //currently using server_id slot to communicate clusterId as all serverId are 1
+  serverInfo.set_hostname("0.0.0.0:");
+  serverInfo.set_port(port_no);
+  
+  //pass the stub and serverInfo to another thread where it will be continually sent to the coordinator
+  std::thread heartBeat([&stub_coord, serverInfo]() {
+    Confirmation confirmation;
+    while(1) {
+      ClientContext context;
+      grpc::Status status = stub_coord->Heartbeat(&context, serverInfo, &confirmation);
+
+      sleep(5);
+    }
+  });
+
+  //ToDo: CONSTRUCT SERVER ADDRESS FROM NEW ARGUMENTS
   //construct server address
   std::string server_address = "0.0.0.0:"+port_no;
   //create instance of SNSSServiceImpl to implement grpc methods

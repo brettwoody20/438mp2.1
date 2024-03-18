@@ -83,7 +83,35 @@ bool zNode::isActive(){
 class CoordServiceImpl final : public CoordService::Service {
 
     Status Heartbeat(ServerContext* context, const ServerInfo* serverinfo, Confirmation* confirmation) override {
-        // Your code here
+        zNode* server = nullptr;
+
+        v_mutex.lock();
+        
+        
+        //if the server already exists
+        if (!clusters[serverinfo->serverid()-1].empty()) { //serverid currently holds cluster id
+            zNode* server = clusters[serverinfo->serverid()-1][0];
+            //if the server missed a hearbeat
+            if (server->missed_heartbeat) {
+                //set that it has not missed a heartbeat
+                server->missed_heartbeat = false;
+            }
+            //set last heartbeat to now
+            server->last_heartbeat = getTimeNow();
+        }
+        //else, need to create new server in list
+        else {
+            //create new z node with server info and insert it into cluster
+            zNode* newServer = new zNode;
+            newServer->serverID = 1; //SERVID
+            newServer->hostname = serverinfo->hostname();
+            newServer->port = serverinfo->port();
+            newServer->missed_heartbeat = false;
+            clusters[serverinfo->serverid()-1].push_back(newServer);
+        }
+
+        v_mutex.unlock();
+
         return Status::OK;
     }
 
